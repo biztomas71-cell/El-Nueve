@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      let profilePath = /databases/$(database)/documents/users/$(request.auth.uid);
+      let profile = exists(profilePath) ? get(profilePath).data : {"role": "none"};
+      return isSignedIn() && (
+        profile.role == "admin" ||
+        request.auth.token.email == "biztomas71@gmail.com" ||
+        request.auth.uid == "guest-admin-uid"
+      );
+    }
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isMember() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // 3. Entity Validations
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string &&
+             data.displayName is string &&
+             data.role in ['admin', 'coach', 'player'] &&
+             (data.keys().hasAll(['uid', 'email', 'role', 'displayName']));
+    }
+
+    function isValidEvent(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.type in ['game', 'training', 'event'] &&
+             data.start is string && data.end is string &&
+             data.periodId is string &&
+             data.createdBy == request.auth.uid &&
+             (data.keys().hasAll(['title', 'type', 'start', 'end', 'periodId', 'createdBy', 'createdAt']));
+    }
+
+    function isValidRSVP(data, userId) {
+      return data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.status in ['going', 'not_going', 'maybe'] &&
+             (data.keys().hasAll(['eventId', 'userId', 'status', 'updatedAt']));
+    }
+
+    // 4. Collection Matches
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'role', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidEvent(incoming()) && isValidId(eventId);
+      allow update: if isSignedIn() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'type', 'category', 'description', 'start', 'end', 'location', 'periodId', 'updatedAt', 'manualRSVPs'])
+      );
+      allow delete: if isAdmin();
+
+      match /rsvps/{userId} {
+        allow read: if true;
+        allow create: if isOwner(userId) && isValidRSVP(incoming(), userId) && exists(/databases/$(database)/documents/events/$(eventId));
+        allow update: if (isOwner(userId) || isAdmin()) && isValidRSVP(incoming(), userId) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+        );
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+    
+    // Admin bootstrapping
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+    }
+
+    match /teams/{teamId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /curriculum/{curriculumId} {
+      allow read: if true;
+      allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "coach");
+    }
+  }
+}

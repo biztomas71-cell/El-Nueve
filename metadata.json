@@ -1,0 +1,8 @@
+{
+  "name": "EL NUEVE",
+  "description": "Plataforma centralizada para el Club Nueve de Julio: gestión de partidos, entrenamientos y contenidos técnicos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

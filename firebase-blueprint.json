@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A member of the basketball club.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique Firebase Auth ID." },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "coach", "player"] },
+        "photoURL": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A game, training session, or club event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["game", "training", "event"] },
+        "description": { "type": "string" },
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "periodId": { "type": "string", "description": "The bi-monthly period ID (e.g. 2026-01)" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "start", "end", "periodId", "createdBy", "createdAt"]
+    },
+    "RSVP": {
+      "title": "RSVP",
+      "description": "A response to an event.",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "userId": { "type": "string" },
+        "status": { "type": "string", "enum": ["going", "not_going", "maybe"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "userId", "status", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Calendar events."
+    },
+    "/events/{eventId}/rsvps/{userId}": {
+      "schema": "RSVP",
+      "description": "RSVPs for a specific event."
+    }
+  }
+}
