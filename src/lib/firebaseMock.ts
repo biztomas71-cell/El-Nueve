@@ -6,7 +6,7 @@ export type Callback = (snapshot: any) => void;
 
 class MockAuth {
   currentUser: any = null;
-  onAuthStateChanged(callback: (user: any) => void) {
+  onAuthStateChanged(auth: any, callback: (user: any) => void) {
     const storedUser = localStorage.getItem('mock_user');
     if (storedUser) {
       this.currentUser = JSON.parse(storedUser);
@@ -21,7 +21,9 @@ class MockAuth {
       localStorage.setItem('mock_user', JSON.stringify(this.currentUser));
     }
     
-    setTimeout(() => callback(this.currentUser), 100);
+    if (typeof callback === 'function') {
+      setTimeout(() => callback(this.currentUser), 100);
+    }
     return () => {};
   }
 

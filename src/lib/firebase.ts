@@ -21,23 +21,24 @@ import {
   deleteDoc as realDeleteDoc, 
   Timestamp 
 } from 'firebase/firestore';
-import firebaseConfigJson from '../../firebase-applet-config.json';
 import { OperationType } from '../types';
 import { mockAuth, mockDb, MockGoogleAuthProvider } from './firebaseMock';
 
-// Use environment variables if available, otherwise fallback to the config file
+// We try to use the environment variables from Vite (.env or GitHub Secrets)
+// If those aren't set, we would normally use the internal config, 
+// but for GitHub/deployment, we provide safe fallbacks.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'MOCK_KEY',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
-const shouldUseMocks = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'MY_API_KEY' || import.meta.env.VITE_USE_MOCKS === 'true';
+const shouldUseMocks = firebaseConfig.apiKey === 'MOCK_KEY' || firebaseConfig.apiKey === 'MY_API_KEY' || import.meta.env.VITE_USE_MOCKS === 'true';
 
-const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigJson.firestoreDatabaseId;
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || '(default)';
 
 // Initialize Real Firebase if not using mocks
 let realApp: any = null;
