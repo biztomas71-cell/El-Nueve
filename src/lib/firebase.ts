@@ -1,8 +1,29 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, getDoc, setDoc, updateDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { 
+  getAuth, 
+  GoogleAuthProvider as RealGoogleAuthProvider, 
+  signInWithPopup as realSignInWithPopup, 
+  signOut as realSignOut,
+  onAuthStateChanged as realOnAuthStateChanged
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc as realDoc, 
+  getDocFromServer, 
+  getDoc as realGetDoc, 
+  setDoc as realSetDoc, 
+  updateDoc as realUpdateDoc, 
+  collection as realCollection, 
+  query as realQuery, 
+  where as realWhere, 
+  onSnapshot as realOnSnapshot, 
+  addDoc as realAddDoc, 
+  deleteDoc as realDeleteDoc, 
+  Timestamp 
+} from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { OperationType } from '../types';
+import { mockAuth, mockDb, MockGoogleAuthProvider } from './firebaseMock';
 
 // Use environment variables if available, otherwise fallback to the config file
 const firebaseConfig = {
@@ -14,67 +35,65 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
 };
 
-const hasValidConfig = firebaseConfig.apiKey && firebaseConfig.apiKey !== 'MY_API_KEY';
+const shouldUseMocks = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'MY_API_KEY' || import.meta.env.VITE_USE_MOCKS === 'true';
 
 const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigJson.firestoreDatabaseId;
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firestoreDatabaseId);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+// Initialize Real Firebase if not using mocks
+let realApp: any = null;
+let realDb: any = null;
+let realAuth: any = null;
 
-// Validation test as per skill
+if (!shouldUseMocks) {
+  try {
+    realApp = initializeApp(firebaseConfig);
+    realDb = getFirestore(realApp, firestoreDatabaseId);
+    realAuth = getAuth(realApp);
+  } catch (e) {
+    console.error("Failed to initialize Firebase:", e);
+  }
+}
+
+// Exported instances
+export const db = shouldUseMocks ? mockDb : realDb;
+export const auth = shouldUseMocks ? mockAuth : realAuth;
+export const googleProvider = shouldUseMocks ? new MockGoogleAuthProvider() : new RealGoogleAuthProvider();
+
+// Exported functions
+export const signInWithPopup = shouldUseMocks ? (mockAuth.signInWithPopup.bind(mockAuth) as any) : realSignInWithPopup;
+export const signOut = shouldUseMocks ? (mockAuth.signOut.bind(mockAuth) as any) : realSignOut;
+export const onAuthStateChanged = shouldUseMocks ? (mockAuth.onAuthStateChanged.bind(mockAuth) as any) : realOnAuthStateChanged;
+
+export const doc = shouldUseMocks ? (mockDb.doc.bind(mockDb) as any) : realDoc;
+export const getDoc = shouldUseMocks ? (mockDb.getDoc.bind(mockDb) as any) : realGetDoc;
+export const setDoc = shouldUseMocks ? (mockDb.setDoc.bind(mockDb) as any) : realSetDoc;
+export const updateDoc = shouldUseMocks ? (mockDb.updateDoc.bind(mockDb) as any) : realUpdateDoc;
+export const collection = shouldUseMocks ? (mockDb.collection.bind(mockDb) as any) : realCollection;
+export const query = shouldUseMocks ? (mockDb.query.bind(mockDb) as any) : realQuery;
+export const where = shouldUseMocks ? (mockDb.where.bind(mockDb) as any) : realWhere;
+export const onSnapshot = shouldUseMocks ? (mockDb.onSnapshot.bind(mockDb) as any) : realOnSnapshot;
+export const addDoc = shouldUseMocks ? (mockDb.addDoc.bind(mockDb) as any) : realAddDoc;
+export const deleteDoc = shouldUseMocks ? (mockDb.deleteDoc.bind(mockDb) as any) : realDeleteDoc;
+
+export { Timestamp };
+
+// Validation test
 async function testConnection() {
-  if (!hasValidConfig) {
-    console.warn("⚠️ Firebase configuration is missing or invalid. Authentication and Database features will not work.");
+  if (shouldUseMocks) {
+    console.log("🚀 Running in Mock Firebase mode (Local Storage)");
     return;
   }
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error: any) {
-    if (error?.message?.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+    if (realDb) {
+      await getDocFromServer(realDoc(realDb, 'test', 'connection'));
     }
+  } catch (error: any) {
+    console.warn("Firebase connection warning:", error.message);
   }
 }
 testConnection();
 
-// Error handler as per skill
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: string;
-  path: string | null;
-  authInfo: any;
-}
-
 export function handleFirestoreError(error: unknown, operationType: string, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  if (shouldUseMocks) return; // Silent in mock mode
+  console.error(`Firestore Error [${operationType}] at [${path}]:`, error);
 }
-
-export { 
-  signInWithPopup, 
-  signOut,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  collection,
-  query,
-  where,
-  onSnapshot,
-  addDoc,
-  deleteDoc,
-  Timestamp
-};

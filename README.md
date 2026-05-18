@@ -41,19 +41,39 @@ npm run dev
 
 La aplicación estará disponible en `http://localhost:3000`.
 
-## Despliegue en GitHub Pages
+## Despliegue en GitHub Pages (vía GitHub Actions)
 
-1. **Configurar el Repositorio**:
-   - Asegúrate de que el campo `homepage` en `package.json` coincida con tu URL de GitHub Pages (ej. `https://tu-usuario.github.io/tu-repo/`).
-2. **Subir el código a GitHub**.
-3. **Desplegar**:
-   ```bash
-   npm run deploy
-   ```
-4. **Configurar Secrets**:
-   - En GitHub, ve a `Settings > Secrets and variables > Actions`.
-   - Agrega todas las variables que comienzan con `VITE_FIREBASE_` que definiste en tu `.env`.
-   - Si usas GitHub Actions para desplegar, asegúrate de que el workflow tenga acceso a estas variables.
+Para que la aplicación funcione correctamente en GitHub Pages, sigue estos pasos:
+
+1. **Configurar Secrets en GitHub**:
+   - Ve a tu repositorio en GitHub.
+   - Entra en `Settings > Secrets and variables > Actions`.
+   - Haz clic en `New repository secret` y añade cada una de las siguientes variables (puedes encontrar los valores en tu archivo `.env` o en la consola de Firebase):
+     - `VITE_FIREBASE_API_KEY`
+     - `VITE_FIREBASE_AUTH_DOMAIN`
+     - `VITE_FIREBASE_PROJECT_ID`
+     - `VITE_FIREBASE_STORAGE_BUCKET`
+     - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+     - `VITE_FIREBASE_APP_ID`
+     - `VITE_FIREBASE_FIRESTORE_DATABASE_ID` (Si usas el ID por defecto, suele ser `(default)`)
+
+2. **Habilitar GitHub Actions para Pages**:
+   - Ve a `Settings > Pages`.
+   - En la sección **Build and deployment**, bajo **Source**, selecciona **GitHub Actions**.
+
+3. **Subir cambios**:
+   - Una vez que subas el archivo `.github/workflows/deploy.yml` a tu rama `main`, GitHub Actions comenzará automáticamente el proceso de construcción y despliegue.
+
+4. **Soporte para Rutas (SPA)**:
+   - El workflow incluye un paso que copia `index.html` a `404.html`. Esto permite que si recargas la página en una ruta interna (ej. `/calendario`), GitHub Pages no devuelva un error 404 y cargue la aplicación correctamente.
+
+## Modo de Prueba (Sin Firebase)
+
+Si deseas probar la aplicación rápidamente en GitHub Pages sin configurar Firebase:
+- La aplicación detectará automáticamente si faltan las variables de entorno y entrará en **Modo Mock**.
+- Los datos se guardarán localmente en tu navegador (`localStorage`).
+- Podrás usar las funcionalidades de calendario y currículum, pero los cambios solo serán visibles para ti en ese navegador.
+- Para habilitar la colaboración real, sigue los pasos de configuración de Firebase mencionados anteriormente.
 
 ## Despliegue (General)
 
